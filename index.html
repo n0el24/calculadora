@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculator</title>
+  <style>
+    :root{
+      --bg:#0f1115;
+      --panel:#1a1d24;
+      --btn:#2a2f3a;
+      --btn-fn:#3a3f4a;
+      --btn-op:#ff9f0a;
+      --btn-op-hover:#ffa92a;
+      --text:#e8eaed;
+      --muted:#b6bdc6;
+      --shadow: 0 20px 40px rgba(0,0,0,.35), 0 2px 4px rgba(0,0,0,.6);
+      --radius: 18px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 800px at 20% -10%, #1a1d24 0%, #0f1115 60%, #0b0d11 100%);
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      display:grid; place-items:center;
+    }
+
+    .calc{
+      width:min(92vw, 380px);
+      background:linear-gradient(180deg, #161922, #141720 40%, #12151d);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding:16px;
+      border:1px solid rgba(255,255,255,.06);
+    }
+
+    .topbar{
+      display:flex; gap:8px; align-items:center; padding:6px 6px 12px 6px;
+    }
+    .dot{width:12px; height:12px; border-radius:50%}
+    .dot.close{background:#ff5f57}
+    .dot.min{background:#febc2e}
+    .dot.max{background:#28c840}
+
+    .display{
+      background:linear-gradient(180deg, #0c0e13, #0b0d12);
+      border-radius: 14px;
+      padding:22px 16px;
+      margin:6px 6px 14px;
+      min-height:76px;
+      text-align:right;
+      font-variant-numeric: tabular-nums;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04), inset 0 -1px 0 rgba(0,0,0,.6);
+    }
+    .display .value{font-size: 38px; line-height:1; word-break: break-all}
+    .display .mini{font-size: 12px; color:var(--muted); opacity:.85}
+
+    .keys{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; padding:6px }
+
+    button{
+      appearance:none; border:0; cursor:pointer; user-select:none;
+      background: var(--btn); color:var(--text);
+      padding:18px 0; border-radius: 14px; font-size: 20px; line-height:1;
+      transition: transform .04s ease, background .15s ease, box-shadow .15s ease, filter .15s ease;
+      box-shadow: 0 2px 0 rgba(255,255,255,.02), inset 0 1px 0 rgba(255,255,255,.02);
+    }
+    button:active{ transform: translateY(1px); filter: brightness(1.08) }
+    button.fn{ background: var(--btn-fn); color:#f2f2f2 }
+    button.op{ background: var(--btn-op); color:#1e1e1e; font-weight:700 }
+    button.op:hover{ background: var(--btn-op-hover) }
+    button.zero{ grid-column: span 2; text-align:left; padding-left:26px }
+    button.active-op{ filter: brightness(1.08); outline: 2px solid rgba(255,255,255,.15) }
+    button:focus-visible{ outline:2px solid #6aa4ff; outline-offset:2px }
+
+    .footer{ text-align:center; margin-top:12px; color:var(--muted); font-size:12px }
+    .kbd{ padding:2px 6px; border-radius:6px; background:#20242d; border:1px solid #2b3040; color:#d8dde6 }
+
+    @media (max-width:360px){
+      .display .value{font-size: 32px}
+      button{ padding:16px 0; font-size:18px }
+    }
+  </style>
+</head>
+<body>
+  <main class="calc" role="application" aria-label="Calculator">
+    <div class="topbar" aria-hidden="true">
+      <div class="dot close"></div>
+      <div a="dot min"></div>
+      <div class="dot max"></div>
+    </div>
+
+    <div class="display" aria-live="polite" aria-atomic="true">
+      <div class="mini" id="expression">&nbsp;</div>
+      <div class="value" id="screen">0</div>
+    </div>
+
+    <div class="keys" id="keys">
+      <button class="fn" data-action="clear" aria-label="Clear">AC</button>
+      <button class="fn" data-action="sign" aria-label="Toggle sign">±</button>
+      <button class="fn" data-action="percent" aria-label="Percent">%</button>
+      <button class="op" data-op="/" aria-label="Divide">÷</button>
+
+      <button data-digit="7">7</button>
+      <button data-digit="8">8</button>
+      <button data-digit="9">9</button>
+      <button class="op" data-op="*" aria-label="Multiply">×</button>
+
+      <button data-digit="4">4</button>
+      <button data-digit="5">5</button>
+      <button data-digit="6">6</button>
+      <button class="op" data-op="-" aria-label="Subtract">−</button>
+
+      <button data-digit="1">1</button>
+      <button data-digit="2">2</button>
+      <button data-digit="3">3</button>
+      <button class="op" data-op="+" aria-label="Add">+</button>
+
+      <button class="zero" data-digit="0">0</button>
+      <button data-action="dot" aria-label="Decimal">.</button>
+      <button class="op" data-action="equals" aria-label="Equals">=</button>
+    </div>
+    <div class="footer">Tip: usa el teclado. <span class="kbd">0‑9</span>, <span class="kbd">+ − × ÷</span>, <span class="kbd">.</span>, <span class="kbd">Enter</span>, <span class="kbd">Backspace</span>, <span class="kbd">Esc</span></div>
+  </main>
+
+  <script>
+    const screen = document.getElementById('screen');
+    const expr = document.getElementById('expression');
+    const keys = document.getElementById('keys');
+    const clearBtn = () => keys.querySelector('[data-action="clear"]');
+
+    const calcState = {
+      displayValue: '0',
+      firstOperand: null,
+      operator: null,
+      waitingForSecond: false,
+      lastKey: null,
+    };
+
+    function updateScreen(){
+      screen.textContent = calcState.displayValue;
+      const { firstOperand, operator, waitingForSecond } = calcState;
+      expr.textContent = (firstOperand !== null && operator)
+        ? `${format(firstOperand)} ${opSymbol(operator)} ${waitingForSecond ? '' : format(calcState.displayValue)}`
+        : '\u00A0';
+      // AC/C label behavior
+      clearBtn().textContent = (calcState.displayValue !== '0' || calcState.operator || calcState.firstOperand !== null) ? 'C' : 'AC';
+    }
+
+    function inputDigit(d){
+      if (calcState.waitingForSecond){
+        calcState.displayValue = String(d);
+        calcState.waitingForSecond = false;
+      } else {
+        calcState.displayValue = (calcState.displayValue === '0') ? String(d) : calcState.displayValue + d;
+      }
+    }
+    function inputDot(){
+      if (calcState.waitingForSecond){
+        calcState.displayValue = '0.';
+        calcState.waitingForSecond = false;
+        return;
+      }
+      if (!calcState.displayValue.includes('.')) calcState.displayValue += '.';
+    }
+
+    function toggleSign(){
+      if (calcState.displayValue === '0') return;
+      if (calcState.displayValue.startsWith('-')) calcState.displayValue = calcState.displayValue.slice(1);
+      else calcState.displayValue = '-' + calcState.displayValue;
+    }
+
+    function percent(){
+      // Behavior similar to macOS: if there is an operator and first operand, treat percent as
+      // (firstOperand * current / 100) for +/-, or (current / 100) for other ops.
+      const current = parseFloat(calcState.displayValue) || 0;
+      if (calcState.firstOperand !== null && calcState.operator){
+        const base = (calcState.operator === '+' || calcState.operator === '-') ? calcState.firstOperand : 1;
+        calcState.displayValue = String((base * current) / 100);
+      } else {
+        calcState.displayValue = String(current / 100);
+      }
+    }
+
+    function clear(){
+      if (clearBtn().textContent === 'C'){
+        calcState.displayValue = '0';
+      } else {
+        calcState.displayValue = '0';
+        calcState.firstOperand = null;
+        calcState.operator = null;
+        calcState.waitingForSecond = false;
+      }
+    }
+
+    function opSymbol(op){
+      return ({'+': '+', '-': '−', '*': '×', '/': '÷'})[op] || op;
+    }
+
+    function format(n){
+      const asNum = Number(n);
+      if (!Number.isFinite(asNum)) return String(n);
+      const parts = String(n).split('.');
+      const i = new Intl.NumberFormat(undefined, { maximumFractionDigits: 12 }).format(Number(parts[0]));
+      if (parts.length === 1) return i;
+      return i + '.' + parts[1].replace(/0+$/, '');
+    }
+
+    function perform(op, a, b){
+      a = Number(a); b = Number(b);
+      switch (op){
+        case '+': return a + b;
+        case '-': return a - b;
+        case '*': return a * b;
+        case '/': return b === 0 ? NaN : a / b;
+        default: return b;
+      }
+    }
+
+    function setOperator(nextOp){
+      const inputValue = parseFloat(calcState.displayValue);
+
+      if (calcState.operator && calcState.waitingForSecond){
+        calcState.operator = nextOp; // change operator before typing 2nd operand
+      } else if (calcState.firstOperand === null){
+        calcState.firstOperand = inputValue;
+        calcState.operator = nextOp;
+        calcState.waitingForSecond = true;
+      } else if (calcState.operator){
+        const result = perform(calcState.operator, calcState.firstOperand, inputValue);
+        calcState.displayValue = String(result);
+        calcState.firstOperand = result;
+        calcState.operator = nextOp;
+        calcState.waitingForSecond = true;
+      } else {
+        calcState.operator = nextOp;
+        calcState.firstOperand = inputValue;
+        calcState.waitingForSecond = true;
+      }
+      highlightActiveOperator();
+    }
+
+    function equals(){
+      const inputValue = parseFloat(calcState.displayValue);
+      if (calcState.operator === null || calcState.firstOperand === null) return;
+      const result = perform(calcState.operator, calcState.firstOperand, inputValue);
+      calcState.displayValue = String(result);
+      calcState.firstOperand = null;
+      calcState.operator = null;
+      calcState.waitingForSecond = false;
+      highlightActiveOperator();
+    }
+
+    // UI wiring
+    keys.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const d = btn.dataset.digit;
+      const op = btn.dataset.op;
+      const action = btn.dataset.action;
+      if (d !== undefined) inputDigit(d);
+      else if (action === 'dot') inputDot();
+      else if (action === 'clear') clear();
+      else if (action === 'sign') toggleSign();
+      else if (action === 'percent') percent();
+      else if (action === 'equals') equals();
+      else if (op) setOperator(op);
+      updateScreen();
+      calcState.lastKey = btn;
+    });
+
+    // Keyboard support
+    const keyMap = {
+      '+': '+', '-': '-', '*': '*', '/': '/', 'x': '*', 'X': '*',
+      'Enter': 'equals', '=': 'equals', 'Backspace': 'back', '.': 'dot', ',': 'dot',
+      'Escape': 'clear'
+    };
+
+    document.addEventListener('keydown', (e)=>{
+      const { key } = e;
+      if (/^[0-9]$/.test(key)){ inputDigit(key); updateScreen(); return; }
+      if (key in keyMap){
+        e.preventDefault();
+        const action = keyMap[key];
+        if (action === 'equals') { equals(); updateScreen(); return; }
+        if (action === 'dot') { inputDot(); updateScreen(); return; }
+        if (action === 'clear') { clear(); updateScreen(); return; }
+        if (action === 'back') { backspace(); updateScreen(); return; }
+        if (['+','-','*','/'].includes(action)) { setOperator(action); updateScreen(); return; }
+      }
+    });
+
+    function backspace(){
+      if (calcState.waitingForSecond) return;
+      if (calcState.displayValue.length <= 1 || (calcState.displayValue.length === 2 && calcState.displayValue.startsWith('-'))){
+        calcState.displayValue = '0';
+      } else {
+        calcState.displayValue = calcState.displayValue.slice(0, -1);
+      }
+    }
+
+    function highlightActiveOperator(){
+      keys.querySelectorAll('.op').forEach(b=>b.classList.remove('active-op'));
+      if (calcState.operator){
+        const active = keys.querySelector(`.op[data-op="${cssEscape(calcState.operator)}"]`);
+        if (active) active.classList.add('active-op');
+      }
+    }
+
+    // Polyfill for CSS.escape (older browsers)
+    function cssEscape(sel){
+      if (window.CSS && window.CSS.escape) return window.CSS.escape(sel);
+      return sel.replace(/([.*+?^${}()|[\]\\])/g, '\\$1');
+    }
+
+    updateScreen();
+  </script>
+</body>
+</html>
